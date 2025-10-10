@@ -115,7 +115,7 @@ func RenderScene() {
 	{
 		var x float64
 		for x = 0; x < SCREEN_WIDTH; x++ {
-			cameraX := ((2 * x) / float64(SCREEN_WIDTH)) - 1
+			cameraX := ((2 * x) / float64(SCREEN_WIDTH)) - 1 // cameraX : -1...0...1
 			rayDir := Dir.Add(Plane.Mul(cameraX))
 
 			mapX := int32(Pos.X)
@@ -411,7 +411,6 @@ func main() {
 		ListenKeyDown()
 
 		rl.BeginDrawing()
-		rl.ClearBackground(rl.Black)
 		RenderScene()
 		DrawFPS()
 		DrawMap()
