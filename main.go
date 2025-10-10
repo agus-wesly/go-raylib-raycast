@@ -17,8 +17,11 @@ const MAP_HEIGHT = 16
 const MAP_SCREEN_WIDTH = 160
 const MAP_SCREEN_HEIGHT = 160
 
-const TEX_WIDTH = 512
-const TEX_HEIGHT = 512
+const TEX_WIDTH = 64
+const TEX_HEIGHT = 64
+
+const FLOOR_TEX_WIDTH = 64
+const FLOOR_TEX_HEIGHT = 64
 
 const PIXEL_SIZE = 2
 
@@ -72,10 +75,6 @@ var floorCeilTexture rl.Texture2D
 
 
 func RenderScene() {
-	// Background
-	{
-		rl.DrawTextureRec(bgTexture, rl.NewRectangle(bgStart, 0, 800, 500), rl.NewVector2(0, 0), rl.White)
-	}
 	// Floor cast
 	{
 		var y float64
@@ -98,18 +97,18 @@ func RenderScene() {
 				cellX := math.Floor(wallX)
 				cellY := math.Floor(wallY)
 
-				texX := int32(TEX_WIDTH*(wallX-cellX)) & (TEX_WIDTH - 1)
-				texY := int32(TEX_HEIGHT*(wallY-cellY)) & (TEX_HEIGHT - 1)
+				texX := int32(FLOOR_TEX_WIDTH*(wallX-cellX)) & (FLOOR_TEX_WIDTH - 1)
+				texY := int32(FLOOR_TEX_HEIGHT*(wallY-cellY)) & (FLOOR_TEX_HEIGHT - 1)
 
 				wallX += stepSizeX
 				wallY += stepSizeY
 
-				floorColor := floorTexture[int(texY)*int(TEX_WIDTH)+int(texX)]
+				floorColor := floorTexture[int(texY)*int(FLOOR_TEX_WIDTH)+int(texX)]
 				floorBuffer[x] = floorColor
 			}
-			rl.UpdateTextureRec(floorCeilTexture, rl.NewRectangle(0, float32(y-(SCREEN_HEIGHT/2)), SCREEN_WIDTH, 1), floorBuffer)
+			rl.UpdateTextureRec(floorCeilTexture, rl.NewRectangle(0, float32(y), SCREEN_WIDTH, 1), floorBuffer)
 		}
-		rl.DrawTexture(floorCeilTexture, 0, SCREEN_HEIGHT/2, rl.White)
+		rl.DrawTexture(floorCeilTexture, 0, 0, rl.White)
 	}
 
 	// Wall cast
@@ -289,7 +288,6 @@ func RotateRight(angle float64) {
 		Plane.X = x
 		Plane.Y = y
 	}
-	bgStart+=20
 }
 
 func RotateLeft(angle float64) {
@@ -306,7 +304,6 @@ func RotateLeft(angle float64) {
 		Plane.X = x
 		Plane.Y = y
 	}
-	bgStart-=20
 }
 
 func MoveForward(speed float64) {
@@ -350,7 +347,7 @@ func ListenKeyDown() {
 	if rl.IsKeyPressed(rl.KeyUp) {
 		yDir = -1
 	}
-	if rl.IsKeyPressed(rl.KeyPageDown) {
+	if rl.IsKeyPressed(rl.KeyDown) {
 		yDir = 1
 	}
 
@@ -360,7 +357,7 @@ func ListenKeyDown() {
 	if rl.IsKeyDown(rl.KeyLeft) && xDir == -1 {
 		RotateLeft(rad)
 	}
-	if rl.IsKeyDown(rl.KeyPageDown) && yDir == 1 {
+	if rl.IsKeyDown(rl.KeyDown) && yDir == 1 {
 		MoveBackward(speed)
 	}
 	if rl.IsKeyDown(rl.KeyUp) && yDir == -1 {
@@ -381,7 +378,6 @@ const TEX_COUNT = 20
 
 var floorTexture []color.RGBA
 var bgTexture rl.Texture2D
-var bgStart float32 = 0
 
 var textures []rl.Texture2D = make([]rl.Texture2D, TEX_COUNT)
 
@@ -396,10 +392,10 @@ func InitTexture() {
 	textures[TEX_3] = wall3
 	textures[TEX_4] = wall4
 
-	floorTexture = rl.LoadImageColors(rl.LoadImageFromTexture(rl.LoadTexture("./assets/aot/floor2.png")))
+	floorTexture = rl.LoadImageColors(rl.LoadImageFromTexture(rl.LoadTexture("./assets/aot/floor.png")))
 	// ceilTexture = rl.LoadImageColors(rl.LoadImageFromTexture(wood))
 	bgTexture = rl.LoadTexture("./assets/aot/bg.png")
-	floorCeilTexture = rl.LoadTextureFromImage(rl.GenImageColor(SCREEN_WIDTH, SCREEN_HEIGHT/2, rl.SkyBlue))
+	floorCeilTexture = rl.LoadTextureFromImage(rl.GenImageColor(SCREEN_WIDTH, SCREEN_HEIGHT, rl.SkyBlue))
 }
 
 func main() {
