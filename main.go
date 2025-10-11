@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"image/color"
 	"math"
 
@@ -24,6 +25,7 @@ const FLOOR_TEX_WIDTH = 64
 const FLOOR_TEX_HEIGHT = 64
 
 const PIXEL_SIZE = 2
+const SPRITE_COUNT = 2
 
 var MAP [MAP_WIDTH][MAP_HEIGHT]int = [MAP_WIDTH][MAP_HEIGHT]int{
 	{4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4},
@@ -67,11 +69,18 @@ func (v Vec2) Mul(n float64) Vec2 {
 	return Vec2{v.X * n, v.Y * n}
 }
 
+type Sprite struct {
+	Tex rl.Texture2D
+	Pos Vec2
+}
+var sprites [SPRITE_COUNT]Sprite
+var zDistance [SCREEN_WIDTH]float64
+
 var Pos = Vec2{2.6, 4.8}
 var Dir = Vec2{1, 0}
 var Plane = Vec2{0, 0.66}
 
-var floorCeilTexture rl.Texture2D
+var screenBuffer rl.RenderTexture2D
 
 func RenderFloor() {
 	var y float64
@@ -103,14 +112,19 @@ func RenderFloor() {
 			floorColor := floorTexture[int(texY)*int(FLOOR_TEX_WIDTH)+int(texX)]
 			floorBuffer[x] = floorColor
 		}
-		rl.UpdateTextureRec(floorCeilTexture, rl.NewRectangle(0, float32(y), SCREEN_WIDTH, 1), floorBuffer)
+		rl.UpdateTextureRec(
+			screenBuffer.Texture, 
+			rl.NewRectangle(0, float32(SCREEN_HEIGHT/2 - (y - SCREEN_HEIGHT/2)), // Y is flipped in screenBuffer
+			SCREEN_WIDTH, 1), 
+			floorBuffer,
+		)
 	}
-	rl.DrawTexture(floorCeilTexture, 0, 0, rl.White)
 }
 
 func RenderWall() {
 	var x float64
 	for x = 0; x < SCREEN_WIDTH; x++ {
+		// var wallBuffer []rl.Color = make([]rl.Color, SCREEN_HEIGHT)
 		cameraX := ((2 * x) / float64(SCREEN_WIDTH)) - 1 // cameraX : -1...0...1
 		rayDir := Dir.Add(Plane.Mul(cameraX))
 
@@ -222,7 +236,6 @@ func RenderWall() {
 			0.0,
 			tint,
 		)
-
 		drawRay(rayDir)
 	}
 
@@ -405,7 +418,15 @@ func InitTexture() {
 	floorTexture = rl.LoadImageColors(rl.LoadImageFromTexture(rl.LoadTexture("./assets/aot/floor.png")))
 	// ceilTexture = rl.LoadImageColors(rl.LoadImageFromTexture(wood))
 	bgTexture = rl.LoadTexture("./assets/aot/bg.png")
-	floorCeilTexture = rl.LoadTextureFromImage(rl.GenImageColor(SCREEN_WIDTH, SCREEN_HEIGHT, rl.NewColor(0, 0, 104, 255)))
+	screenBuffer = rl.LoadRenderTexture(SCREEN_WIDTH, SCREEN_HEIGHT)
+}
+
+func InitSprite() {
+	barrel := rl.LoadTexture("./assets/sprite/barrel.png")
+	pillar := rl.LoadTexture("./assets/sprite/pillar.png")
+
+	sprites[0] = Sprite{Pos: Vec2{0, 1}, Tex: barrel}
+	sprites[1] = Sprite{Pos: Vec2{0, 1}, Tex: pillar}
 }
 
 func main() {
@@ -416,14 +437,25 @@ func main() {
 	rl.SetWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT)
 
 	InitTexture()
+	InitSprite()
 
 	for !rl.WindowShouldClose() {
 		ListenKeyDown()
 
+		rl.BeginTextureMode(screenBuffer)
+			rl.ClearBackground(rl.NewColor(0, 0, 104, 255))
+			RenderScene()
+			DrawFPS()
+			DrawMap()
+		rl.EndTextureMode()
+
 		rl.BeginDrawing()
-		RenderScene()
-		DrawFPS()
-		DrawMap()
+			rl.DrawTextureRec(
+				screenBuffer.Texture, 
+				rl.NewRectangle(0, 0, float32(screenBuffer.Texture.Width), float32(-screenBuffer.Texture.Height)), 
+				rl.NewVector2(0, 0), 
+				rl.White,
+		)
 		rl.EndDrawing()
 	}
 }
