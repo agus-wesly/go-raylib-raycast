@@ -106,7 +106,6 @@ func RenderFloor() {
 		rl.UpdateTextureRec(floorCeilTexture, rl.NewRectangle(0, float32(y), SCREEN_WIDTH, 1), floorBuffer)
 	}
 	rl.DrawTexture(floorCeilTexture, 0, 0, rl.White)
-
 }
 
 func RenderWall() {
@@ -216,11 +215,11 @@ func RenderWall() {
 		tint := rl.NewColor(uint8(tintVal), uint8(tintVal), uint8(tintVal), 255)
 
 		rl.DrawTexturePro(
-			selectedTex, 
+			selectedTex,
 			rl.NewRectangle(float32(texX), float32(texY), 1, TEX_HEIGHT),
 			rl.NewRectangle(float32(x), float32(wallStart), 1, float32(wallHeight)),
-			rl.Vector2{X: 0, Y: 0}, 
-			0.0, 
+			rl.Vector2{X: 0, Y: 0},
+			0.0,
 			tint,
 		)
 
