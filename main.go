@@ -284,7 +284,15 @@ func RenderSprites() {
 					texY := (y - SCREEN_HEIGHT/2 + spriteHeight/2) * TEX_HEIGHT / spriteHeight
 					color := sprite.Tex[int(texY)*TEX_WIDTH+int(texX)]
 					if color != rl.Black {
-						rl.DrawRectangle(x, y, 1, 1, color)
+						// Shade
+						tintVal := transformY/16
+						assert(tintVal >= 0 && tintVal <= 1, "Unexpected")
+						r := color.R - uint8(tintVal*float64(color.R))
+						g := color.G - uint8(tintVal*float64(color.G))
+						b := color.B - uint8(tintVal*float64(color.B))
+						a := color.A
+						newColor := rl.NewColor(r, g, b, a)
+						rl.DrawRectangle(x, y, 1, 1, newColor)
 					} 
 				}
 			}
@@ -479,8 +487,12 @@ func InitSprite() {
 	barrel := rl.LoadImageColors(rl.LoadImageFromTexture(rl.LoadTexture("./assets/sprite/barrel.png")))
 	pillar := rl.LoadImageColors(rl.LoadImageFromTexture(rl.LoadTexture("./assets/sprite/pillar.png")))
 
-	sprites = append(sprites, Sprite{Pos: Vec2{3, 9}, Tex: barrel})
-	sprites = append(sprites, Sprite{Pos: Vec2{4, 10}, Tex: pillar})
+	sprites = append(sprites, Sprite{Pos: Vec2{8, 1.5}, Tex: barrel})
+	sprites = append(sprites, Sprite{Pos: Vec2{9, 1.5}, Tex: barrel})
+	sprites = append(sprites, Sprite{Pos: Vec2{8.5, 1.5}, Tex: barrel})
+
+	sprites = append(sprites, Sprite{Pos: Vec2{7.3, 1.5}, Tex: pillar})
+	sprites = append(sprites, Sprite{Pos: Vec2{9.8, 1.5}, Tex: pillar})
 }
 
 func main() {
