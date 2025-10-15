@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"sort"
 	"image/color"
 	"math"
+	"sort"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -69,11 +69,16 @@ func (v Vec2) Mul(n float64) Vec2 {
 	return Vec2{v.X * n, v.Y * n}
 }
 
+func (v Vec2) Len() float64 {
+	return math.Sqrt(v.X*v.X + v.Y*v.Y)
+}
+
 type Sprite struct {
-	Tex rl.Texture2D
+	Tex []color.RGBA
 	Pos Vec2
 }
-var sprites [SPRITE_COUNT]Sprite
+
+var sprites []Sprite
 var zDistance [SCREEN_WIDTH]float64
 
 var Pos = Vec2{2.6, 4.8}
@@ -113,9 +118,9 @@ func RenderFloor() {
 			floorBuffer[x] = floorColor
 		}
 		rl.UpdateTextureRec(
-			screenBuffer.Texture, 
-			rl.NewRectangle(0, float32(SCREEN_HEIGHT/2 - (y - SCREEN_HEIGHT/2)), // Y is flipped in screenBuffer
-			SCREEN_WIDTH, 1), 
+			screenBuffer.Texture,
+			rl.NewRectangle(0, float32(SCREEN_HEIGHT/2-(y-SCREEN_HEIGHT/2)), // Y is flipped in screenBuffer
+				SCREEN_WIDTH, 1),
 			floorBuffer,
 		)
 	}
@@ -190,13 +195,7 @@ func RenderWall() {
 			perpWallDist = sideDist.Y - deltaDist.Y
 		}
 
-		var factor float64 = 1.25
-		if perpWallDist > 0 {
-			res := 1.75 / perpWallDist
-			if res < factor {
-				factor = res
-			}
-		}
+		zDistance[int(x)] = perpWallDist
 
 		wallHeight := SCREEN_HEIGHT / perpWallDist
 		wallStart := (-wallHeight / 2) + SCREEN_HEIGHT/2
@@ -241,9 +240,64 @@ func RenderWall() {
 
 }
 
+func calcEuclideanDistance(p, q Vec2) float64 {
+	return ((p.X - q.X) * (p.X - q.X)) + ((p.Y - q.Y) * (p.Y - q.Y))
+
+}
+
+func RenderSprites() {
+	sort.Slice(sprites, func(i, j int) bool {
+		distToFirst := calcEuclideanDistance(Pos, sprites[i].Pos)
+		distToSecond := calcEuclideanDistance(Pos, sprites[j].Pos)
+		return distToFirst > distToSecond
+	})
+
+
+	for _, sprite := range sprites {
+		spriteX := sprite.Pos.X - Pos.X
+		spriteY := sprite.Pos.Y - Pos.Y
+
+		invDet := 1.0 / (Plane.X*Dir.Y - Dir.X*Plane.Y)
+		transformX := invDet * (Dir.Y*spriteX - Dir.X*spriteY)
+		transformY := invDet * (-Plane.Y*spriteX + Plane.X*spriteY)
+		spriteScreenX := int32((SCREEN_WIDTH / 2) * (1 + transformX/transformY))
+
+		spriteHeight := int32(math.Abs(SCREEN_HEIGHT / transformY))
+		drawStartY := max(SCREEN_HEIGHT/2 - spriteHeight/2, 0)
+		drawEndY := SCREEN_HEIGHT/2 + spriteHeight/2
+		if drawEndY >= SCREEN_HEIGHT {
+			drawEndY = SCREEN_HEIGHT - 1
+		}
+
+		spriteWidth := int32(math.Abs(SCREEN_HEIGHT / transformY))
+		drawStartX := max(spriteScreenX - int32(spriteWidth/2), 0)
+		drawEndX := spriteScreenX + int32(spriteWidth/2)
+		if drawEndX >= SCREEN_WIDTH {
+			drawEndX = SCREEN_WIDTH - 1
+		}
+
+		for x := drawStartX; x < drawEndX; x++ {
+			texX := (x - (spriteScreenX - int32(spriteWidth/2))) * TEX_WIDTH / spriteWidth
+
+			if transformY > 0 && x > 0 && x < SCREEN_WIDTH && transformY < zDistance[x] {
+				for y := drawStartY; y < drawEndY; y++ {
+					texY := (y - SCREEN_HEIGHT/2 + spriteHeight/2) * TEX_HEIGHT / spriteHeight
+					color := sprite.Tex[int(texY)*TEX_WIDTH+int(texX)]
+					if color != rl.Black {
+						rl.DrawRectangle(x, y, 1, 1, color)
+					} 
+				}
+			}
+
+		}
+	}
+
+}
+
 func RenderScene() {
 	RenderFloor()
-	RenderWall()
+  	RenderWall()
+	RenderSprites()
 }
 
 func mapCoordToPixel(vec Vec2) Vec2 {
@@ -422,11 +476,11 @@ func InitTexture() {
 }
 
 func InitSprite() {
-	barrel := rl.LoadTexture("./assets/sprite/barrel.png")
-	pillar := rl.LoadTexture("./assets/sprite/pillar.png")
+	barrel := rl.LoadImageColors(rl.LoadImageFromTexture(rl.LoadTexture("./assets/sprite/barrel.png")))
+	pillar := rl.LoadImageColors(rl.LoadImageFromTexture(rl.LoadTexture("./assets/sprite/pillar.png")))
 
-	sprites[0] = Sprite{Pos: Vec2{0, 1}, Tex: barrel}
-	sprites[1] = Sprite{Pos: Vec2{0, 1}, Tex: pillar}
+	sprites = append(sprites, Sprite{Pos: Vec2{3, 9}, Tex: barrel})
+	sprites = append(sprites, Sprite{Pos: Vec2{4, 10}, Tex: pillar})
 }
 
 func main() {
@@ -443,18 +497,18 @@ func main() {
 		ListenKeyDown()
 
 		rl.BeginTextureMode(screenBuffer)
-			rl.ClearBackground(rl.NewColor(0, 0, 104, 255))
-			RenderScene()
-			DrawFPS()
-			DrawMap()
+		rl.ClearBackground(rl.NewColor(0, 0, 104, 255))
+		RenderScene()
+		DrawFPS()
+		DrawMap()
 		rl.EndTextureMode()
 
 		rl.BeginDrawing()
-			rl.DrawTextureRec(
-				screenBuffer.Texture, 
-				rl.NewRectangle(0, 0, float32(screenBuffer.Texture.Width), float32(-screenBuffer.Texture.Height)), 
-				rl.NewVector2(0, 0), 
-				rl.White,
+		rl.DrawTextureRec(
+			screenBuffer.Texture,
+			rl.NewRectangle(0, 0, float32(screenBuffer.Texture.Width), float32(-screenBuffer.Texture.Height)),
+			rl.NewVector2(0, 0),
+			rl.White,
 		)
 		rl.EndDrawing()
 	}
